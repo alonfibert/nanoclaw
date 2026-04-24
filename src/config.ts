@@ -10,8 +10,25 @@ const envConfig = readEnvFile([
   'ASSISTANT_HAS_OWN_NUMBER',
   'ONECLI_URL',
   'ONECLI_API_KEY',
+  'ANTHROPIC_API_KEY',
+  'CLAUDE_CODE_OAUTH_TOKEN',
+  'GOOGLE_MAPS_API_KEY',
+  'GITHUB_TOKEN',
+  'NOTION_TOKEN',
   'TZ',
 ]);
+
+// Promote credentials to process.env so container-runner can pass them through
+if (!process.env.ANTHROPIC_API_KEY && envConfig.ANTHROPIC_API_KEY)
+  process.env.ANTHROPIC_API_KEY = envConfig.ANTHROPIC_API_KEY;
+if (!process.env.CLAUDE_CODE_OAUTH_TOKEN && envConfig.CLAUDE_CODE_OAUTH_TOKEN)
+  process.env.CLAUDE_CODE_OAUTH_TOKEN = envConfig.CLAUDE_CODE_OAUTH_TOKEN;
+if (!process.env.GOOGLE_MAPS_API_KEY && envConfig.GOOGLE_MAPS_API_KEY)
+  process.env.GOOGLE_MAPS_API_KEY = envConfig.GOOGLE_MAPS_API_KEY;
+if (!process.env.GITHUB_TOKEN && envConfig.GITHUB_TOKEN)
+  process.env.GITHUB_TOKEN = envConfig.GITHUB_TOKEN;
+if (!process.env.NOTION_TOKEN && envConfig.NOTION_TOKEN)
+  process.env.NOTION_TOKEN = envConfig.NOTION_TOKEN;
 
 export const ASSISTANT_NAME =
   process.env.ASSISTANT_NAME || envConfig.ASSISTANT_NAME || 'Andy';

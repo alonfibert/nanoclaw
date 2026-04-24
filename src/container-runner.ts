@@ -197,6 +197,26 @@ function buildVolumeMounts(
     });
   }
 
+  // Google Drive credentials directory (for Google Drive skill inside the container)
+  const gdriveDir = path.join(homeDir, '.gdrive-mcp');
+  if (fs.existsSync(gdriveDir)) {
+    mounts.push({
+      hostPath: gdriveDir,
+      containerPath: '/home/node/.gdrive-mcp',
+      readonly: false,
+    });
+  }
+
+  // Mount .env file so skills can read API keys and tokens
+  const envPath = path.join(projectRoot, '.env');
+  if (fs.existsSync(envPath)) {
+    mounts.push({
+      hostPath: envPath,
+      containerPath: '/home/node/.env',
+      readonly: true,
+    });
+  }
+
   // Per-group IPC namespace: each group gets its own IPC directory
   // This prevents cross-group privilege escalation via IPC
   const groupIpcDir = resolveGroupIpcPath(group.folder);
@@ -278,6 +298,22 @@ async function buildContainerArgs(
       { containerName },
       'OneCLI gateway not reachable — container will have no credentials',
     );
+    // Fall back to passing API keys directly when OneCLI is unavailable
+    if (process.env.ANTHROPIC_API_KEY) {
+      args.push('-e', `ANTHROPIC_API_KEY=${process.env.ANTHROPIC_API_KEY}`);
+    }
+    if (process.env.CLAUDE_CODE_OAUTH_TOKEN) {
+      args.push('-e', `CLAUDE_CODE_OAUTH_TOKEN=${process.env.CLAUDE_CODE_OAUTH_TOKEN}`);
+    }
+    if (process.env.GOOGLE_MAPS_API_KEY) {
+      args.push('-e', `GOOGLE_MAPS_API_KEY=${process.env.GOOGLE_MAPS_API_KEY}`);
+    }
+    if (process.env.GITHUB_TOKEN) {
+      args.push('-e', `GITHUB_TOKEN=${process.env.GITHUB_TOKEN}`);
+    }
+    if (process.env.NOTION_TOKEN) {
+      args.push('-e', `NOTION_TOKEN=${process.env.NOTION_TOKEN}`);
+    }
   }
 
   // Runtime-specific args for host gateway resolution
