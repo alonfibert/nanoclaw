@@ -69,6 +69,19 @@ import { logger } from './logger.js';
 // Re-export for backwards compatibility during refactor
 export { escapeXml, formatMessages } from './router.js';
 
+function getErrorMessage(error: string): string {
+  if (/no conversation found|session.*not found/i.test(error)) {
+    return '🔄 Chat history corrupted, starting fresh...';
+  }
+  if (/timeout|SIGKILL|killed|timed out/i.test(error)) {
+    return '⏱️ Agent stopped responding, retrying...';
+  }
+  if (/json|parse|syntax/i.test(error)) {
+    return '⚙️ Failed to process response, retrying...';
+  }
+  return '⚠️ Something went wrong, retrying...';
+}
+
 let lastTimestamp = '';
 let sessions: Record<string, string> = {};
 let registeredGroups: Record<string, RegisteredGroup> = {};
@@ -314,6 +327,17 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
   if (idleTimer) clearTimeout(idleTimer);
 
   if (output === 'error' || hadError) {
+    // Send error message to user if we didn't already send output
+    if (!outputSentToUser && output && output !== 'error') {
+      const errorOutput = output as unknown as { error?: string };
+      if (errorOutput?.error) {
+        const errorMsg = getErrorMessage(errorOutput.error);
+        await channel.sendMessage?.(chatJid, errorMsg).catch((err) =>
+          logger.debug({ chatJid, err }, 'Failed to send error message'),
+        );
+      }
+    }
+
     // If we already sent output to the user, don't roll back the cursor —
     // the user got their response and re-processing would send duplicates.
     if (outputSentToUser) {

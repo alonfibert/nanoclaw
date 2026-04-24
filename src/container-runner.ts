@@ -207,6 +207,15 @@ function buildVolumeMounts(
     });
   }
 
+  // Agent home folder — full read-write access for creating and editing files
+  const agentHomeDir = path.join(DATA_DIR, 'agent-home');
+  fs.mkdirSync(agentHomeDir, { recursive: true });
+  mounts.push({
+    hostPath: agentHomeDir,
+    containerPath: '/home/node/agent-home',
+    readonly: false,
+  });
+
   // Mount .env file so skills can read API keys and tokens
   const envPath = path.join(projectRoot, '.env');
   if (fs.existsSync(envPath)) {
