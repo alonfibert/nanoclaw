@@ -303,7 +303,10 @@ async function buildContainerArgs(
       args.push('-e', `ANTHROPIC_API_KEY=${process.env.ANTHROPIC_API_KEY}`);
     }
     if (process.env.CLAUDE_CODE_OAUTH_TOKEN) {
-      args.push('-e', `CLAUDE_CODE_OAUTH_TOKEN=${process.env.CLAUDE_CODE_OAUTH_TOKEN}`);
+      args.push(
+        '-e',
+        `CLAUDE_CODE_OAUTH_TOKEN=${process.env.CLAUDE_CODE_OAUTH_TOKEN}`,
+      );
     }
     if (process.env.GOOGLE_MAPS_API_KEY) {
       args.push('-e', `GOOGLE_MAPS_API_KEY=${process.env.GOOGLE_MAPS_API_KEY}`);
