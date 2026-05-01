@@ -2,7 +2,7 @@ import { spawn } from 'child_process';
 
 export async function runGoogleCalendarCommand(command, params) {
   return new Promise((resolve, reject) => {
-    const args = ['/Users/Alon.Fibert/.agents/skills/google-calendar/scripts/google-calendar.py', command];
+    const args = ['/home/node/.claude/skills/google-calendar/scripts/google-calendar.py', command];
 
     // Build arguments from params
     Object.entries(params).forEach(([key, value]) => {
