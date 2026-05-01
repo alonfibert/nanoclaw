@@ -207,6 +207,16 @@ function buildVolumeMounts(
     });
   }
 
+  // Vertex AI credentials directory (for Google Imagen skill inside the container)
+  const vertexAiDir = path.join(homeDir, '.vertex-ai-mcp');
+  if (fs.existsSync(vertexAiDir)) {
+    mounts.push({
+      hostPath: vertexAiDir,
+      containerPath: '/home/node/.vertex-ai-mcp',
+      readonly: true,
+    });
+  }
+
   // Agent home folder — full read-write access for creating and editing files
   const agentHomeDir = path.join(DATA_DIR, 'agent-home');
   fs.mkdirSync(agentHomeDir, { recursive: true });

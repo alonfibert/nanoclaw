@@ -471,6 +471,7 @@ async function runQuery(
         'NotebookEdit',
         'mcp__nanoclaw__*',
         'mcp__gmail__*',
+        'mcp__imagenVertexAi__*',
       ],
       env: sdkEnv,
       permissionMode: 'bypassPermissions',
@@ -491,6 +492,14 @@ async function runQuery(
           args: ['-y', '@gongrzhe/server-gmail-autoauth-mcp'],
           env: {
             HOME: '/home/node',
+          },
+        },
+        imagenVertexAi: {
+          command: 'node',
+          args: ['/home/node/.claude/skills/google-imagen/imagen.js'],
+          env: {
+            GOOGLE_CLOUD_PROJECT: process.env.GOOGLE_CLOUD_PROJECT,
+            VERTEX_AI_REGION: process.env.VERTEX_AI_REGION || 'us-central1',
           },
         },
       },
