@@ -332,9 +332,11 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
       const errorOutput = output as unknown as { error?: string };
       if (errorOutput?.error) {
         const errorMsg = getErrorMessage(errorOutput.error);
-        await channel.sendMessage?.(chatJid, errorMsg).catch((err) =>
-          logger.debug({ chatJid, err }, 'Failed to send error message'),
-        );
+        await channel
+          .sendMessage?.(chatJid, errorMsg)
+          .catch((err) =>
+            logger.debug({ chatJid, err }, 'Failed to send error message'),
+          );
       }
     }
 
