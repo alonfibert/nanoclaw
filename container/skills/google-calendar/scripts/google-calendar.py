@@ -36,6 +36,7 @@ from typing import Any
 try:
     from google.auth.transport.requests import Request
     from google.oauth2.credentials import Credentials
+    from google.oauth2.service_account import Credentials as ServiceAccountCredentials
     from google_auth_oauthlib.flow import InstalledAppFlow
 
     GOOGLE_AUTH_AVAILABLE = True
@@ -265,14 +266,12 @@ def _run_oauth_flow(service: str, scopes: list[str]) -> Credentials:
 
 
 def get_google_credentials(service: str, scopes: list[str]) -> Credentials:
-    """Get Google credentials for human-in-the-loop use cases.
+    """Get Google credentials with priority for service accounts.
 
     Priority:
-    1. Saved OAuth tokens from keyring - from previous OAuth flow
-    2. OAuth 2.0 flow - opens browser for user consent
-
-    Note: Service account authentication is NOT supported - this is
-    designed for interactive human use cases only.
+    1. Service account JSON key file - for headless/server use
+    2. Saved OAuth tokens from keyring - from previous OAuth flow
+    3. OAuth 2.0 flow - opens browser for user consent
 
     Args:
         service: Service name (e.g., "google-calendar").
@@ -284,7 +283,24 @@ def get_google_credentials(service: str, scopes: list[str]) -> Credentials:
     Raises:
         AuthenticationError: If authentication fails.
     """
-    # 1. Try keyring-stored OAuth token from previous flow
+    # 1. Try service account JSON file (for headless environments)
+    service_account_files = [
+        CONFIG_DIR / f"{service}-key.json",
+        CONFIG_DIR / "nanoclaw-493611-eff75823f07b.json",
+        Path.home() / ".config" / "agent-skills" / "nanoclaw-493611-eff75823f07b.json",
+    ]
+    for key_file in service_account_files:
+        if key_file.exists():
+            try:
+                creds = ServiceAccountCredentials.from_service_account_file(
+                    str(key_file), scopes=scopes
+                )
+                return creds
+            except Exception as e:
+                print(f"Failed to load service account from {key_file}: {e}", file=sys.stderr)
+                continue
+
+    # 2. Try keyring-stored OAuth token from previous flow
     token_json = get_credential(f"{service}-token-json")
     if token_json:
         try:
@@ -315,7 +331,7 @@ def get_google_credentials(service: str, scopes: list[str]) -> Credentials:
             # Invalid or corrupted token, fall through to OAuth flow
             pass
 
-    # 2. Initiate OAuth flow - human interaction required
+    # 3. Initiate OAuth flow - human interaction required
     try:
         return _run_oauth_flow(service, scopes)
     except Exception as e:
