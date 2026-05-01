@@ -1,6 +1,13 @@
+import { Server } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { Tool, TextContent } from '@modelcontextprotocol/sdk/types.js';
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { GoogleAuth } from 'google-auth-library';
+
+const server = new Server({
+  name: 'imagen-vertexai',
+  version: '1.0.0',
+});
 
 let authClient = null;
 let projectId = null;
@@ -27,7 +34,7 @@ function ensureAttachmentDir() {
   return attachmentDir;
 }
 
-async function generateImage(prompt, options = {}) {
+async function generateImage(prompt) {
   await initializeAuth();
 
   const client = await authClient.getClient();
@@ -42,14 +49,8 @@ async function generateImage(prompt, options = {}) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      instances: [
-        {
-          prompt: prompt,
-        },
-      ],
-      parameters: {
-        sampleCount: 1,
-      },
+      instances: [{ prompt }],
+      parameters: { sampleCount: 1 },
     }),
   });
 
@@ -59,8 +60,7 @@ async function generateImage(prompt, options = {}) {
   }
 
   const data = await response.json();
-
-  if (!data.predictions || data.predictions.length === 0) {
+  if (!data.predictions?.length) {
     throw new Error('No images generated from API');
   }
 
@@ -73,44 +73,73 @@ async function generateImage(prompt, options = {}) {
       const buffer = Buffer.from(prediction.bytesBase64Encoded, 'base64');
       const fileName = `imagen_${timestamp}_${index}.png`;
       const filePath = join(attachmentDir, fileName);
-
       writeFileSync(filePath, buffer);
       filePaths.push(filePath);
     }
   });
 
-  if (filePaths.length === 0) {
+  if (!filePaths.length) {
     throw new Error('No valid images in API response');
   }
 
   return filePaths;
 }
 
-export const tools = {
-  async generateImage({ prompt }) {
-    try {
-      const filePaths = await generateImage(prompt);
-      return JSON.stringify({
-        success: true,
-        message: `Generated ${filePaths.length} image(s): ${filePaths.join(', ')}`,
-        file_paths: filePaths,
-      });
-    } catch (err) {
-      throw new Error(`Image generation failed: ${err.message}`);
-    }
-  },
+server.setRequestHandler('tools/list', async () => ({
+  tools: [
+    {
+      name: 'generateImage',
+      description: 'Generate an image from a text prompt using Vertex AI Imagen',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          prompt: {
+            type: 'string',
+            description: 'The text prompt for image generation',
+          },
+        },
+        required: ['prompt'],
+      },
+    },
+  ] as Tool[],
+}));
 
-  async generateStyledImage({ prompt, style = 'photorealistic' }) {
+server.setRequestHandler('tools/call', async (request) => {
+  const { name, arguments: args } = request.params;
+
+  if (name === 'generateImage') {
     try {
-      const styledPrompt = `${prompt}, style: ${style}`;
-      const filePaths = await generateImage(styledPrompt);
-      return JSON.stringify({
-        success: true,
-        message: `Generated ${filePaths.length} ${style} image(s): ${filePaths.join(', ')}`,
-        file_paths: filePaths,
-      });
+      const filePaths = await generateImage(args.prompt);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Successfully generated ${filePaths.length} image(s):\n${filePaths.join('\n')}`,
+          } as TextContent,
+        ],
+      };
     } catch (err) {
-      throw new Error(`Image generation failed: ${err.message}`);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error generating image: ${err instanceof Error ? err.message : String(err)}`,
+          } as TextContent,
+        ],
+        isError: true,
+      };
     }
-  },
-};
+  }
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: `Unknown tool: ${name}`,
+      } as TextContent,
+    ],
+    isError: true,
+  };
+});
+
+server.connect();
