@@ -498,6 +498,7 @@ async function runQuery(
           command: 'node',
           args: ['/home/node/.claude/skills/google-imagen/imagen.js'],
           env: {
+            HOME: '/home/node',
             GOOGLE_CLOUD_PROJECT: process.env.GOOGLE_CLOUD_PROJECT || '',
             VERTEX_AI_REGION: process.env.VERTEX_AI_REGION || 'us-central1',
           },
